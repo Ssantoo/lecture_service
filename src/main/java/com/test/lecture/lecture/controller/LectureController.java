@@ -1,12 +1,12 @@
 package com.test.lecture.lecture.controller;
 
+import com.test.lecture.common.domain.exception.ResourceNotFoundException;
 import com.test.lecture.lecture.controller.port.LectureService;
 import com.test.lecture.lecture.controller.response.LectureResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -31,6 +31,16 @@ public class LectureController {
         return ResponseEntity.ok(lectures);
     }
 
+    /*
+    특강 신청 완료 여부 조회 API **`GET /lectures/application/{userId}`**
+    - 특정 userId 로 특강 신청 완료 여부를 조회하는 API 를 작성합니다.
+    - 특강 신청에 성공한 사용자는 성공했음을, 특강 등록자 명단에 없는 사용자는 실패했음을 반환합니다. (true, false)
+     */
+    @GetMapping("/application/{userId}")
+    public ResponseEntity<Boolean> userLectureCheck(@PathVariable long userId, @RequestParam long lectureId) {
+        boolean isApplied = lectureService.userLectureCheck(lectureId, userId);
+        return ResponseEntity.ok(isApplied);
+    }
 
 
 

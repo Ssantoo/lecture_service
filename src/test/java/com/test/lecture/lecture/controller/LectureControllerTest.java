@@ -1,6 +1,7 @@
 package com.test.lecture.lecture.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.test.lecture.common.domain.exception.ResourceNotFoundException;
 import com.test.lecture.lecture.controller.port.LectureService;
 import com.test.lecture.lecture.domain.Lecture;
 import com.test.lecture.lecture.domain.LectureStatus;
@@ -8,25 +9,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.jdbc.Sql;
-import org.springframework.test.context.jdbc.SqlGroup;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.mockito.BDDMockito.given;
@@ -81,6 +74,53 @@ public class LectureControllerTest {
                 .andExpect(jsonPath("$[2].currentSeat").value(25))
                 .andExpect(jsonPath("$[2].lectureTime").value("2024-06-10T09:00:00"))
                 .andExpect(jsonPath("$[2].lectureStatus").value("CLOSED"));
+    }
+
+    @Test
+    void 강의_신청_완료_여부_성공시_조회() throws Exception {
+        //given
+        long lectureId = 1L;
+        long userId = 1L;
+        given(lectureService.userLectureCheck(lectureId, userId)).willReturn(true);
+        //when
+        //then
+        mockMvc.perform(get("/api/lectures/application/{userId}", userId)
+                        .param("lectureId", String.valueOf(lectureId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(true));
+    }
+
+    @Test
+    void 강의_신청_완료_여부_실패시_조회() throws Exception {
+        //given
+        long lectureId = 1L;
+        long userId = 1L;
+
+        given(lectureService.userLectureCheck(lectureId, userId)).willReturn(false);
+
+        //when
+        //then
+        mockMvc.perform(get("/api/lectures/application/{userId}", userId)
+                        .param("lectureId", String.valueOf(lectureId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(false));
+    }
+
+    @Test
+    void 유저가_존재하지_않을_때() throws Exception {
+        //given
+        long lectureId = 1L;
+        long userId = 1L;
+
+        given(lectureService.userLectureCheck(lectureId, userId)).willThrow(new ResourceNotFoundException("User or Lecture", userId));
+
+        //when
+        //then
+        mockMvc.perform(get("/api/lectures/application/{userId}", userId)
+                        .param("lectureId", String.valueOf(lectureId)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("404"))
+                .andExpect(jsonPath("$.message").value("User or Lecture에서 ID 1를 찾을 수 없습니다."));
     }
 
 
