@@ -3,25 +3,25 @@ package com.test.lecture.lecture.domain;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
 public class Lecture {
-    private final long id;
+    private final Long id;
     private final String name;
-    private final int seat;
-    private final int currentSeat;
-    private final LocalDateTime lectureTime;
-    private final LectureStatus lectureStatus;
+    private final String teacher;
+    private final int maxCapacity;
+    private final List<Schedule> schedules;
 
     @Builder
-    public Lecture(long id, String name, int seat, int currentSeat, LocalDateTime lectureTime, LectureStatus lectureStatus) {
+    public Lecture(Long id, String name, String teacher, int maxCapacity, List<Schedule> schedules) {
         this.id = id;
         this.name = name;
-        this.seat = seat;
-        this.currentSeat = currentSeat;
-        this.lectureTime = lectureTime;
-        this.lectureStatus = lectureStatus;
+        this.teacher = teacher;
+        this.maxCapacity = maxCapacity;
+        this.schedules = schedules;
     }
+
+
 }
+

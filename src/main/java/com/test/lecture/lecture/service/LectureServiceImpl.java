@@ -1,15 +1,19 @@
 package com.test.lecture.lecture.service;
 
-import com.test.lecture.common.domain.exception.ResourceNotFoundException;
-import com.test.lecture.history.service.port.HistoryRepository;
 import com.test.lecture.lecture.controller.port.LectureService;
 import com.test.lecture.lecture.domain.Lecture;
+import com.test.lecture.lecture.domain.LectureApplication;
+import com.test.lecture.lecture.domain.Schedule;
+import com.test.lecture.lecture.infrastructure.entity.ScheduleEntity;
+import com.test.lecture.lecture.service.port.LectureApplicationRepository;
 import com.test.lecture.lecture.service.port.LectureRepository;
+import com.test.lecture.lecture.service.port.ScheduleRepository;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Builder
@@ -18,7 +22,9 @@ public class LectureServiceImpl implements LectureService {
 
     private final LectureRepository lectureRepository;
 
-    private final HistoryRepository historyRepository;
+    private final LectureApplicationRepository lectureApplicationRepository;
+
+    private final ScheduleRepository scheduleRepository;
 
     @Override
     public List<Lecture> getAllLectures() {
@@ -26,10 +32,9 @@ public class LectureServiceImpl implements LectureService {
     }
 
     @Override
-    public boolean userLectureCheck(long lectureId, long userId) throws ResourceNotFoundException {
-        if (!historyRepository.existsByLectureIdAndUserId(lectureId, userId)) {
-            throw new ResourceNotFoundException("유저 또는 강의", userId);
-        }
-        return true;
+    public List<LectureApplication> getApplicationsByUserId(Long userId) {
+        return lectureApplicationRepository.findByUserId(userId);
     }
+
+
 }

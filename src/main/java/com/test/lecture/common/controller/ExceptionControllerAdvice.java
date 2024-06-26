@@ -1,7 +1,10 @@
 package com.test.lecture.common.controller;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.test.lecture.common.domain.exception.LectureException;
 import com.test.lecture.common.domain.exception.ResourceNotFoundException;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.Ordered;
@@ -25,32 +28,29 @@ public class ExceptionControllerAdvice {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(ResourceNotFoundException.class)
     public ErrorResponse resourceNotFoundException(ResourceNotFoundException exception) {
-        return new ErrorResponse("404", exception.getMessage());
+        return new ErrorResponse(NOT_FOUND, exception.getMessage());
     }
 
     @ResponseBody
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(LectureException.class)
     public ErrorResponse lectureApplicationException(LectureException exception) {
-        return new ErrorResponse("400", exception.getMessage());
+        return new ErrorResponse(HttpStatus.BAD_REQUEST, exception.getMessage());
     }
 
     @ResponseBody
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Exception.class)
     public ErrorResponse genericException(Exception exception) {
-        return new ErrorResponse("500", "에러가 발생했습니다.");
+        return new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "에러가 발생했습니다.");
     }
 
-    @Getter
+    @AllArgsConstructor
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class ErrorResponse {
-        private String code;
+        @JsonProperty("status")
+        private HttpStatus status;
+        @JsonProperty("message")
         private String message;
-
-        public ErrorResponse(String code, String message) {
-            this.code = code;
-            this.message = message;
-        }
-
     }
 }
