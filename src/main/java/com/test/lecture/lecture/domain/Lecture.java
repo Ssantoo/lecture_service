@@ -3,24 +3,33 @@ package com.test.lecture.lecture.domain;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.util.List;
-
 @Getter
 public class Lecture {
     private final Long id;
-    private final String name;
-    private final String teacher;
-    private final int maxCapacity;
-    private final List<Schedule> schedules;
+    private final String lectureName;
+    private final String teacherName;
+    private final int totalStudents;
+    private int currentStudents;
+    private final LectureStatus lectureStatus;
 
     @Builder
-    public Lecture(Long id, String name, String teacher, int maxCapacity, List<Schedule> schedules) {
+    public Lecture(Long id, String lectureName, String teacherName,int totalStudents, int currentStudents, LectureStatus lectureStatus) {
         this.id = id;
-        this.name = name;
-        this.teacher = teacher;
-        this.maxCapacity = maxCapacity;
-        this.schedules = schedules;
+        this.lectureName = lectureName;
+        this.teacherName = teacherName;
+        this.totalStudents = totalStudents;
+        this.currentStudents = currentStudents;
+        this.lectureStatus = lectureStatus;
     }
+
+    public boolean isFull() {
+       return currentStudents >= totalStudents;
+    }
+
+    public void incrementCurrentStudents() {
+        if (!isFull()) currentStudents++;
+    }
+
 
 
 }

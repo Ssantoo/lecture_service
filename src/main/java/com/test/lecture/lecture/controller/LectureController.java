@@ -1,9 +1,10 @@
 package com.test.lecture.lecture.controller;
-
-import com.test.lecture.lecture.controller.port.LectureService;
-import com.test.lecture.lecture.controller.dto.LectureApplicationResponse;
+import com.test.lecture.lecture.controller.dto.LectureApplyResponse;
 import com.test.lecture.lecture.controller.dto.LectureResponse;
+import com.test.lecture.lecture.controller.port.LectureService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +16,8 @@ import java.util.List;
 public class LectureController {
 
     private final LectureService lectureService;
+    private static final Logger log = LoggerFactory.getLogger(LectureController.class);
+    //service
 
     /*
         **(기본) 특강 목록 API GET /lectures**
@@ -22,8 +25,12 @@ public class LectureController {
           - 추가로 정원이 특강마다 다르다면 어떻게 처리할것인가
          -그냥 요일이랑 과목만 비교
         ( ex) 아래 두개는 같은 수업 취급.
-         pk1 토 1시 하헌우
-         pk2 토 2시 하헌우)
+         pk1 토 1시 조현재
+         pk2 토 2시 조현재)
+
+         id, 강의 이름, 강사이름, 시간(토 1시) ,강의 총인원, 현재 인원, 강의 현황 보내주면 되는데
+         신청하기 전 목록이니까 status가  (PREPARING, OPEN) 만 보여줘야겠네
+
         -강의와 스케쥴 테이블이 따로 있어야 위 두개 수업이 다른걸 알 수 있을것.(중요)
      */
     @GetMapping
@@ -32,18 +39,21 @@ public class LectureController {
         return ResponseEntity.ok(lectures);
     }
 
-    /*
+
+     /*
         특강 신청 완료 여부 조회 API **GET /lectures/application/{userId}**
         - 특정 userId 로 특강 신청 완료 여부를 조회하는 API 를 작성합니다.
         - 특강정보와 날짜정보도 같이 파라미터를 넘긴다
          -특강신청 성공했을때 true/false 만 넘기는건 좋은 코드가 아니다.
          -풍부한 데이터를 넘기고 프론트에서 선택해서 쓰게끔 하는게 좋다.
      */
-    @GetMapping("/application/{userId}")
-    public ResponseEntity<List<LectureApplicationResponse>> getApplicationsByUserId(@PathVariable Long userId) {
-        List<LectureApplicationResponse> applicationResponses = LectureApplicationResponse.from(lectureService.getApplicationsByUserId(userId));
-        return ResponseEntity.ok(applicationResponses);
-    }
+     @GetMapping("/application/{userId}/{scheduleId}")
+     public ResponseEntity<LectureApplyResponse> checkUserLectureApplication(
+             @PathVariable Long userId, @PathVariable Long scheduleId
+     ) {
+         LectureApplyResponse response = LectureApplyResponse.from(lectureService.checkUserLectureApplication(userId, scheduleId));
+         return ResponseEntity.ok(response);
+     }
 
 
     /*
@@ -55,6 +65,24 @@ public class LectureController {
         - 어떤 유저가 특강을 신청했는지 히스토리를 저장해야한다.
         선착순때문에 낙관적 lock을 안쓰고 , 비관적lock을 사용
      */
+    @PostMapping("/apply")
+    public ResponseEntity<LectureApplyResponse> applyLecture(@RequestParam Long userId, @RequestParam Long scheduleId) {
+        LectureApplyResponse response = LectureApplyResponse.from(lectureService.applyLecture(userId, scheduleId));
+        return ResponseEntity.ok(response);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 }

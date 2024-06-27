@@ -2,6 +2,7 @@ package com.test.lecture.lecture.domain;
 
 import lombok.Builder;
 import lombok.Getter;
+
 import java.time.LocalDateTime;
 
 @Getter
@@ -19,4 +20,3 @@ public class Schedule {
 
 
 }
-
