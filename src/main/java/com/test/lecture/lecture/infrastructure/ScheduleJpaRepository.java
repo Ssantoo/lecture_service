@@ -13,6 +13,6 @@ import java.util.Optional;
 public interface ScheduleJpaRepository extends JpaRepository<ScheduleEntity, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT scheduleEntity FROM ScheduleEntity scheduleEntity WHERE scheduleEntity.id = :scheduleId")
+    @Query("SELECT s FROM ScheduleEntity s WHERE s.id = :scheduleId")
     Optional<ScheduleEntity> findByIdWithLock(@Param("scheduleId") Long scheduleId);
 }

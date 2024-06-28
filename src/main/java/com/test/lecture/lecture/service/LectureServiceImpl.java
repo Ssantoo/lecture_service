@@ -11,9 +11,11 @@ import com.test.lecture.lecture.service.port.LectureApplyRepository;
 import com.test.lecture.lecture.service.port.LectureRepository;
 import com.test.lecture.lecture.service.port.ScheduleRepository;
 import com.test.lecture.lecture.service.port.UserRepository;
+import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -31,7 +33,7 @@ public class LectureServiceImpl implements LectureService {
     private final UserRepository userRepository;
 
     private final LectureApplyRepository lectureApplyRepository;
-
+    private final Object lock = new Object();
     @Override
     public List<Schedule> getAllLectures() {
         return  scheduleRepository.findAll();
@@ -49,16 +51,25 @@ public class LectureServiceImpl implements LectureService {
     @Override
     @Transactional
     public LectureApply applyLecture(Long userId, Long scheduleId) {
-        User user = findByUserId(userId);
-        //Schedule schedule = findByScheduleId(scheduleId);
-        Schedule schedule = findByScheduleIdWithLock(scheduleId);
+//        User user = findByUserId(userId);
+//        //Schedule schedule = findByScheduleId(scheduleId);
+//        Schedule schedule = findByScheduleIdWithLock(scheduleId);
+//
+//        checkAlreadyApply(userId, scheduleId);
+//        lectureAlreadyFull(schedule);
+//        incrementCurrentStudents(schedule);
+//
+//        return createLectureApply(user, schedule);
+        synchronized (lock) { // 동기화 블록
+            User user = findByUserId(userId);
+            Schedule schedule = findByScheduleIdWithLock(scheduleId);
 
-        checkAlreadyApply(userId, scheduleId);
-        lectureAlreadyFull(schedule);
-        incrementCurrentStudents(schedule);
+            checkAlreadyApply(userId, scheduleId);
+            lectureAlreadyFull(schedule);
+            incrementCurrentStudents(schedule);
 
-        return createLectureApply(user, schedule);
-
+            return createLectureApply(user, schedule);
+        }
     }
 
 

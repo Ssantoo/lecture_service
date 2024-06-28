@@ -9,25 +9,22 @@ import com.test.lecture.lecture.service.port.LectureApplyRepository;
 import com.test.lecture.lecture.service.port.LectureRepository;
 import com.test.lecture.lecture.service.port.ScheduleRepository;
 import com.test.lecture.lecture.service.port.UserRepository;
+import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.*;
 
 
@@ -56,9 +53,9 @@ public class LectureServiceTest {
                 new Schedule(1L, LocalDateTime.of(2024, 6, 20, 10, 0),
                         new Lecture(1L, "스프링", "김선생님", 30, 25, LectureStatus.OPEN)),
                 new Schedule(2L, LocalDateTime.of(2023, 6, 20, 10, 0),
-                        new Lecture(2L, "tdd수업", "김선생님",  20, 15, LectureStatus.PREPARING)),
+                        new Lecture(2L, "tdd수업", "김선생님", 20, 15, LectureStatus.PREPARING)),
                 new Schedule(3L, LocalDateTime.of(2024, 6, 20, 10, 0),
-                        new Lecture(3L, "알고리즘", "박선생님",  25, 20, LectureStatus.CLOSED))
+                        new Lecture(3L, "알고리즘", "박선생님", 25, 20, LectureStatus.CLOSED))
         );
         when(scheduleRepository.findAll()).thenReturn(schedules);
 
@@ -219,6 +216,154 @@ public class LectureServiceTest {
     }
 
 
+    @Test
+    @Transactional
+    void 선착순_체크() throws InterruptedException {
+        //given
+        //테스트 10명유저
+        List<User> users = new ArrayList<>();
+        for (long i = 1; i <= 10; i++) {
+            User user = User.builder()
+                    .id(i)
+                    .name("조현재" + i)
+                    .build();
+            users.add(user);
+        }
+
+        Lecture lecture = Lecture.builder()
+                .id(1L)
+                .lectureName("스프링")
+                .teacherName("김선생님")
+                .totalStudents(30)
+                .currentStudents(27)
+                .lectureStatus(LectureStatus.OPEN)
+                .build();
+
+        Schedule schedule = Schedule.builder()
+                .id(1L)
+                .time(LocalDateTime.of(2024, 6, 13, 10, 0))
+                .lecture(lecture)
+                .build();
+
+        given(scheduleRepository.findByIdWithLock(anyLong())).willReturn(Optional.of(schedule));
+        will(invocation -> {
+            LectureApply lectureApply = invocation.getArgument(0);
+            return lectureApply;
+        }).given(lectureApplyRepository).save(any(LectureApply.class));
+
+        for (User user : users) {
+            given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+            given(lectureApplyRepository.existsByUserIdAndScheduleId(user.getId(), schedule.getId())).willReturn(false);
+        }
+
+        CountDownLatch latch = new CountDownLatch(10); // 동시 실행을 위한 CountDownLatch를 생성
+        ExecutorService executor = Executors.newFixedThreadPool(10); // 10개의 스레드를 가진 스레드 풀을 생성
+        List<Exception> exceptions = new ArrayList<>(); //예외처리
+
+        //when
+        for (User user : users) {
+            executor.submit(() -> { // 각 유저에 대해 강의 신청을 시도하는 작업을 스레드 풀에 제출
+                try {
+                    lectureService.applyLecture(user.getId(), schedule.getId()); // 강의 신청을 수행
+                } catch (Exception e) {
+                    exceptions.add(e); // 예외가 발생하면 리스트에 추가
+                } finally {
+                    latch.countDown(); // 작업이 끝나면 CountDownLatch의 카운트를 줄인다
+                }
+            });
+        }
+        latch.await();
+        executor.shutdown();
+
+        //then
+        assertEquals(30, lecture.getCurrentStudents());
+        assertEquals(7, exceptions.size());
+        exceptions.forEach(exception -> {
+            assertTrue(
+                    exception instanceof LectureAlreadyFullException ||
+                            exception instanceof AlreadyApplyException,
+                    "예외발생" + exception.getClass().getName()
+            );
+        });
+
+        then(scheduleRepository).should(times(10)).findByIdWithLock(anyLong()); //findByIdWithLock 메서드가 10번 호출되었는지 검증
+        then(userRepository).should(times(10)).findById(anyLong()); // UserRepository의 findById 메서드가 10번 호출되었는지 검증
+        then(lectureApplyRepository).should(times(10)).existsByUserIdAndScheduleId(anyLong(), anyLong()); // LectureApplyRepository의 existsByUserIdAndScheduleId 메서드가 10번 호출되었는지 검증
+        then(lectureApplyRepository).should(times(3)).save(any(LectureApply.class)); // LectureApplyRepository의 save 메서드가 3번 호출되었는지 검증
+    }
+
+    @Test
+    @Transactional
+    void 동시성_테스트_연습() throws InterruptedException, ExecutionException, TimeoutException {
+        //given
+        long scheduleId = 1L;
+        Lecture lecture = new Lecture(1L, "스프링", "김선생님", 30, 29, LectureStatus.OPEN);
+        Schedule schedule = new Schedule(scheduleId, LocalDateTime.of(2024, 6, 13, 10, 0), lecture);
+        User[] users = {
+                new User(1L, "User 1"),
+                new User(2L, "User 2"),
+                new User(3L, "User 3"),
+                new User(4L, "User 4"),
+                new User(5L, "User 5"),
+                new User(6L, "User 6"),
+                new User(7L, "User 7"),
+                new User(8L, "User 8"),
+                new User(9L, "User 9"),
+                new User(10L, "User 10")
+        };
+
+        // scheduleRepository에서 스케줄을 비관적 락으로 조회하도록 설정
+        given(scheduleRepository.findByIdWithLock(scheduleId)).willReturn(Optional.of(schedule));
+
+        for (User user : users) {
+            given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+            given(lectureApplyRepository.existsByUserIdAndScheduleId(user.getId(), scheduleId)).willReturn(false);
+            // 각 User ID와 Schedule ID에 대해 이미 신청된 기록이 없도록 설정
+        }
+
+        // 10명의 유저가 동시 신청을 비동기로 실행하여 CompletableFuture 리스트로 생성
+        List<CompletableFuture<Optional<LectureApply>>> futures = Arrays.stream(users)
+                .map(user -> CompletableFuture.supplyAsync(() -> {
+                    try {
+                        return Optional.ofNullable(lectureService.applyLecture(user.getId(), scheduleId));
+                    } catch (LectureAlreadyFullException | AlreadyApplyException e) {
+                        return Optional.<LectureApply>empty(); // 예외 발생 시 Optional.empty() 반환
+                    }
+                }))
+                .collect(Collectors.toList());
+
+        // 모든 CompletableFuture를 하나의 CompletableFuture로 합침
+        CompletableFuture<Void> allFutures = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+
+        //when
+        // 10초 내에 모든 비동기 작업 완료 대기
+        allFutures.get(10, TimeUnit.SECONDS);
+
+        //then
+        // 각 CompletableFuture 결과를 Optional로 받아 LectureApply 객체 리스트로 변환
+        List<LectureApply> results = futures.stream()
+                .map(future -> {
+                    try {
+                        return future.get();   // 각 CompletableFuture 결과 가져오기
+                    } catch (InterruptedException | ExecutionException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .flatMap(Optional::stream)
+                .collect(Collectors.toList());
+
+        verify(userRepository, times(10)).findById(anyLong());  // userRepository의 findById 호출 횟수 검증
+        verify(scheduleRepository, times(10)).findByIdWithLock(scheduleId);  // scheduleRepository의 findByIdWithLock 호출 횟수 검증
+        verify(lectureApplyRepository, times(10)).existsByUserIdAndScheduleId(anyLong(), eq(scheduleId));
+        // lectureApplyRepository의 existsByUserIdAndScheduleId 호출 횟수 검증
+
+        // 성공적으로 신청된 유저들 확인
+        int successfulApplications = results.size();
+        assertEquals(1, successfulApplications); // 성공적으로 신청된 유저가 1명인지 검증
+        if (successfulApplications == 1) {
+            System.out.println("성공적으로 신청된 유저: " + results.get(0).getUser().getName());
+        }
+    }
 
 
 
