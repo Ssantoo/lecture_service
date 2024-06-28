@@ -1,9 +1,11 @@
 package com.test.lecture.lecture.domain;
 
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 @Getter
+//@EqualsAndHashCode(of = {"lectureName", "teacherName"})
 public class Lecture {
     private final Long id;
     private final String lectureName;
@@ -30,7 +32,9 @@ public class Lecture {
         if (!isFull()) currentStudents++;
     }
 
-
+    public boolean isSameLecture(Lecture other) {
+        return this.equals(other);
+    }
 
 }
 

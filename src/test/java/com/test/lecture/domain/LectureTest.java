@@ -2,7 +2,10 @@ package com.test.lecture.domain;
 
 import com.test.lecture.lecture.domain.Lecture;
 import com.test.lecture.lecture.domain.LectureStatus;
+import com.test.lecture.lecture.domain.Schedule;
 import org.junit.jupiter.api.Test;
+
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -84,4 +87,57 @@ public class LectureTest {
         assertEquals(30, lecture.getCurrentStudents());
     }
 
+    @Test
+    void 같은_강의_비교() {
+        // Given
+        Lecture lecture1 = new Lecture(1L, "스프링", "김선생님", 30, 29, LectureStatus.OPEN);
+        Lecture lecture2 = new Lecture(2L, "스프링", "김선생님", 30, 29, LectureStatus.OPEN);
+
+        // When
+        boolean isSameLecture = lecture1.isSameLecture(lecture2);
+
+        // Then
+        assertTrue(isSameLecture);
+    }
+
+    @Test
+    void 다른_강의_비교() {
+        //given
+        Lecture lecture1 = new Lecture(1L, "스프링", "김선생님", 30, 29, LectureStatus.OPEN);
+        Lecture lecture2 = new Lecture(2L, "자바", "김선생님", 30, 29, LectureStatus.OPEN);
+
+        //when
+        boolean isSameLecture = lecture1.isSameLecture(lecture2);
+
+        //then
+        assertFalse(isSameLecture);
+    }
+
+    @Test
+    void 같은_스케줄_비교() {
+        //given
+        Lecture lecture = new Lecture(1L, "스프링", "김선생님", 30, 29, LectureStatus.OPEN);
+        Schedule schedule1 = new Schedule(1L, LocalDateTime.of(2024, 6, 13, 10, 0), lecture);
+        Schedule schedule2 = new Schedule(2L, LocalDateTime.of(2024, 6, 13, 9, 0), lecture);
+
+        //when
+        boolean isSameSchedule = schedule1.isSameSchedule(schedule2);
+
+        //then
+        assertTrue(isSameSchedule);
+    }
+
+    @Test
+    void 다른_스케줄_비교() {
+        //given
+        Lecture lecture = new Lecture(1L, "스프링", "김선생님", 30, 29, LectureStatus.OPEN);
+        Schedule schedule1 = new Schedule(1L, LocalDateTime.of(2024, 6, 13, 10, 0), lecture);
+        Schedule schedule2 = new Schedule(2L, LocalDateTime.of(2024, 6, 13, 12, 0), lecture);
+
+        //when
+        boolean isSameSchedule = schedule1.isSameSchedule(schedule2);
+
+        //then
+        assertFalse(isSameSchedule);
+    }
 }
