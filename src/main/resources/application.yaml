@@ -1,22 +1,17 @@
-# spring.application.name=lecture
+#spring.application.name=lecture
 spring:
   h2:
     console:
       enabled: true
       path: /h2-console
-      settings:
-        web-allow-others: true
-        tcp-allow-others: true
-        tcp-port: 8082
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2~/mem-data
     driver-class-name: org.h2.Driver
-    username: sa
+    username: test
     password:
   jpa:
     hibernate:
       ddl-auto: create
     database-platform: org.hibernate.dialect.H2Dialect
 
-server:
-  port: 8080
+
