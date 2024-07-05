@@ -17,6 +17,7 @@ configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
+	querydsl.extendsFrom compileClasspath
 }
 
 repositories {
@@ -26,11 +27,31 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation group: 'jakarta.validation', name: 'jakarta.validation-api', version: '3.0.2'
+	implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.20.0'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.h2database:h2'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'com.querydsl:querydsl-jpa'
+	annotationProcessor 'com.querydsl:querydsl-apt'
+}
+
+sourceSets {
+	main {
+		java {
+			srcDirs += 'src/main/generated'
+		}
+	}
+}
+
+compileJava {
+	options.annotationProcessorPath = configurations.querydsl
+}
+
+tasks.withType(JavaCompile) {
+	options.annotationProcessorPath = configurations.querydsl
 }
 
 tasks.named('test') {
